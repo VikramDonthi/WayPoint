@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/bg_primary"
+    android:orientation="vertical"
+    android:padding="24dp"
+    android:gravity="center_horizontal">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Battery Optimization Setup"
+        android:textColor="@color/text_primary"
+        android:textSize="22sp"
+        android:textStyle="bold"
+        android:layout_marginTop="32dp"/>
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="To ensure your location is accurately tracked during delivery shifts without Android killing the app when your phone is in your pocket, please whitelist Waypoint."
+        android:textColor="@color/text_secondary"
+        android:textSize="14sp"
+        android:layout_marginTop="12dp"
+        android:lineSpacingExtra="4dp"/>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@color/bg_card"
+        android:orientation="vertical"
+        android:padding="16dp"
+        android:layout_marginTop="24dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Steps:"
+            android:textColor="@color/accent_cyan"
+            android:textStyle="bold"/>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="1. Tap 'Configure Battery Settings' below."
+            android:textColor="@color/text_primary"
+            android:layout_marginTop="8dp"/>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="2. Select 'Allow' or change setting to 'Unrestricted'."
+            android:textColor="@color/text_primary"
+            android:layout_marginTop="4dp"/>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="3. Return to Waypoint App."
+            android:textColor="@color/text_primary"
+            android:layout_marginTop="4dp"/>
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/tvStatus"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Checking status..."
+        android:textColor="@color/accent_amber"
+        android:textSize="13sp"
+        android:layout_marginTop="24dp"/>
+
+    <Button
+        android:id="@+id/btnOpenBatterySettings"
+        android:layout_width="match_parent"
+        android:layout_height="54dp"
+        android:text="Configure Battery Settings"
+        android:textColor="#0B0F17"
+        android:textStyle="bold"
+        android:layout_marginTop="24dp"
+        android:backgroundTint="@color/accent_cyan"/>
+
+    <Button
+        android:id="@+id/btnDone"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="I Have Completed This"
+        android:textColor="@color/text_secondary"
+        android:layout_marginTop="12dp"
+        style="@style/Widget.MaterialComponents.Button.TextButton"/>
+
+</LinearLayout>

@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1044006759008",
+    "project_id": "waypoint-82d41",
+    "storage_bucket": "waypoint-82d41.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1044006759008:android:9ed658ed99ac09a222b105",
+        "android_client_info": {
+          "package_name": "com.waypoint.rider"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAiA8ijqfKAF_xs0B-ug3Fkdfdp_Tm2yls"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

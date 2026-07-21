@@ -1,0 +1,16 @@
+/*
+  PLACEHOLDER / INSTRUCTIONS FOR FIREBASE ANDROID APP CONFIGURATION:
+
+  1. Go to your Firebase Console: https://console.firebase.google.com/
+  2. Select your 'waypoint-tracking' project.
+  3. Go to Project Settings -> General -> Your Apps.
+  4. Click "Add App" -> Android.
+  5. Enter Package Name: com.waypoint.rider
+  6. Click "Register App".
+  7. Download 'google-services.json' and place it right here in this folder:
+     c:\Projects\Waypoint\rider-app\app\google-services.json
+
+  Once google-services.json is in place, you can build the sideloadable APK:
+     cd c:\Projects\Waypoint\rider-app
+     gradlew assembleRelease
+*/
