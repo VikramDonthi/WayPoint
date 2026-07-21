@@ -1,0 +1,84 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // Replace 'ADMIN_UID_HERE' with the actual UID of your Admin Firebase Auth user.
+    // Additional admin UIDs can be added to the list: ['UID1', 'UID2']
+    function isAdmin() {
+      return isSignedIn() && request.auth.uid in ['OJbeBE5ACZWj8nvIYMGElMF4D5h1'];
+    }
+
+    function isOwner(riderId) {
+      return isSignedIn() && request.auth.uid == riderId;
+    }
+
+    // -------------------------------------------------------------
+    // riders/{riderId} collection
+    // -------------------------------------------------------------
+    match /riders/{riderId} {
+      // Admins can read all riders; riders can read their own profile doc
+      allow read: if isAdmin() || isOwner(riderId);
+
+      // Only Admin can create new rider records
+      allow create: if isAdmin();
+
+      // Admin or the specific rider can update their status & lastLocation
+      allow update: if isAdmin() || isOwner(riderId);
+
+      // Only Admin can delete rider records
+      allow delete: if isAdmin();
+    }
+
+    // -------------------------------------------------------------
+    // shifts/{shiftId} collection
+    // -------------------------------------------------------------
+    match /shifts/{shiftId} {
+      // Admins can read all shifts; riders can read shifts assigned to them
+      allow read: if isAdmin() || (isSignedIn() && resource.data.riderId == request.auth.uid);
+
+      // Riders can start a shift for themselves; Admin can also create shifts
+      allow create: if isAdmin() || (
+        isSignedIn() &&
+        request.resource.data.riderId == request.auth.uid &&
+        request.resource.data.startTime != null
+      );
+
+      // Riders can update their own shift (e.g. adding endTime on clocking out)
+      allow update: if isAdmin() || (
+        isSignedIn() &&
+        resource.data.riderId == request.auth.uid
+      );
+
+      allow delete: if isAdmin();
+    }
+
+    // -------------------------------------------------------------
+    // pings/{shiftId}/points/{pointId} collection
+    // -------------------------------------------------------------
+    match /pings/{shiftId}/points/{pointId} {
+      // Admins can read all pings; riders can read points under their shift
+      allow read: if isAdmin() || (
+        isSignedIn() &&
+        resource.data.riderId == request.auth.uid
+      );
+
+      // Riders can add location ping points to their shift
+      allow create: if isAdmin() || (
+        isSignedIn() &&
+        request.resource.data.riderId == request.auth.uid &&
+        request.resource.data.lat >= -90.0 && request.resource.data.lat <= 90.0 &&
+        request.resource.data.lng >= -180.0 && request.resource.data.lng <= 180.0 &&
+        request.resource.data.speed >= 0.0 &&
+        request.resource.data.movementType in ['traveling', 'resting', 'delivering']
+      );
+
+      // Pings are append-only; update/delete strictly restricted to admin
+      allow update, delete: if isAdmin();
+    }
+  }
+}
