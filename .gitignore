@@ -1,3 +1,16 @@
+# Secrets & Private Credentials
+serviceAccountKey*.json
+google-services*.json
+*.pem
+*.key
+*.p12
+*.jks
+*.keystore
+local.properties
+.env
+.env.*
+!.env.example
+
 # Node & Web
 node_modules/
 dist/
@@ -8,14 +21,14 @@ yarn-error.log*
 
 # Android & Gradle
 .gradle/
-build/
+**/build/
 app/build/
 *.apk
 *.aar
-*.keystore
 
 # IDEs & System
 .idea/
+.vscode/
 *.iml
 .DS_Store
 Thumbs.db
