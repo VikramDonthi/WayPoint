@@ -68,7 +68,7 @@ export const RiderMobileApp: React.FC = () => {
 
       // 2. Update rider status
       await updateDoc(doc(db, 'riders', riderUser.uid), {
-        status: 'delivering',
+        status: 'traveling',
         currentShiftId: shiftId
       });
 
@@ -132,8 +132,8 @@ export const RiderMobileApp: React.FC = () => {
         if (!db) return;
 
         try {
-          // Write point to pings/{shiftId}/points
-          await addDoc(collection(db, 'pings', shiftId, 'points'), {
+          // Write point to shifts/{shiftId}/points
+          await addDoc(collection(db, 'shifts', shiftId, 'points'), {
             riderId,
             lat,
             lng,

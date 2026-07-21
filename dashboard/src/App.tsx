@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { onAuthStateChanged, type User } from 'firebase/auth';
+import { onAuthStateChanged, signInAnonymously, type User } from 'firebase/auth';
 import { collection, onSnapshot, query, doc, deleteDoc } from 'firebase/firestore';
 import { auth, db } from './firebase';
 import type { Rider } from './types';
@@ -7,6 +7,7 @@ import type { Rider } from './types';
 import { Navbar } from './components/Navbar';
 import { LiveMap } from './components/LiveMap';
 import { RiderList } from './components/RiderList';
+import { FleetSidebar } from './components/FleetSidebar';
 import { AddRiderModal } from './components/AddRiderModal';
 import { ConfigModal } from './components/ConfigModal';
 import { RiderDetailModal } from './components/RiderDetailModal';
@@ -35,6 +36,17 @@ export function App() {
       setAuthChecking(false);
       return;
     }
+
+    // DEV mode: sign in anonymously so Firestore security rules get a real token.
+    // The Firestore rules allow anonymous users to read all data (dev convenience).
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('dev') === 'true') {
+      signInAnonymously(auth).catch((err) => {
+        console.warn('Anonymous sign-in failed:', err);
+      });
+      // Fall through – onAuthStateChanged below will pick up the anon user
+    }
+
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setCurrentUser(user);
       setAuthChecking(false);
@@ -42,7 +54,7 @@ export function App() {
     return () => unsubscribe();
   }, []);
 
-  // Listen to Firestore Riders collection real-time updates when logged in as admin
+  // Listen to Firestore Riders collection real-time updates when logged in
   useEffect(() => {
     if (isRiderMode || !currentUser || !db) {
       setRiders([]);
@@ -59,12 +71,12 @@ export function App() {
         })) as Rider[];
         setRiders(list);
       }, (error) => {
-        console.error("Firestore riders listener error:", error);
+        console.error('Firestore riders listener error:', error);
       });
 
       return () => unsubscribe();
     } catch (e) {
-      console.error("Failed to setup riders listener:", e);
+      console.error('Failed to setup riders listener:', e);
     }
   }, [currentUser, isRiderMode]);
 
@@ -73,7 +85,7 @@ export function App() {
     try {
       await deleteDoc(doc(db, 'riders', riderToDelete.id));
     } catch (err) {
-      console.error("Failed to delete rider from Firestore:", err);
+      console.error('Failed to delete rider from Firestore:', err);
     }
   };
 
@@ -107,7 +119,9 @@ export function App() {
     );
   }
 
-  const onlineCount = riders.filter((r) => r.status === 'traveling' || r.status === 'delivering' || r.status === 'resting').length;
+  const onlineCount = riders.filter((r) =>
+    r.status === 'traveling' || r.status === 'delivering' || r.status === 'resting'
+  ).length;
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#f8fafc', color: '#0f172a' }}>
@@ -119,14 +133,24 @@ export function App() {
         onOpenQR={() => setIsQROpen(true)}
         riderCount={riders.length}
         onlineCount={onlineCount}
+        currentUser={currentUser}
       />
 
-      <main style={{ padding: '1.25rem', maxWidth: '1600px', margin: '0 auto' }}>
+      <main style={{ padding: '1rem 1.25rem', maxWidth: '1700px', margin: '0 auto' }}>
         {activeTab === 'map' ? (
-          <LiveMap
-            riders={riders}
-            onSelectRider={(rider) => setSelectedRider(rider)}
-          />
+          /* Map view: side-by-side map + fleet sidebar */
+          <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <LiveMap
+                riders={riders}
+                onSelectRider={(rider) => setSelectedRider(rider)}
+              />
+            </div>
+            <FleetSidebar
+              riders={riders}
+              onSelectRider={(rider) => setSelectedRider(rider)}
+            />
+          </div>
         ) : (
           <RiderList
             riders={riders}
