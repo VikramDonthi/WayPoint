@@ -63,8 +63,8 @@ class SyncRepository(context: Context) {
                     "timestamp" to Timestamp(Date(ping.timestamp))
                 )
 
-                // 1. Add point to pings/{shiftId}/points/{autoId}
-                db.collection("pings")
+                // 1. Add point to shifts/{shiftId}/points/{autoId}
+                db.collection("shifts")
                     .document(ping.shiftId)
                     .collection("points")
                     .add(pointData)

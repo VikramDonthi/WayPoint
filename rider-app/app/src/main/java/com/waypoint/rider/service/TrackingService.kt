@@ -2,15 +2,21 @@ package com.waypoint.rider.service
 
 import android.annotation.SuppressLint
 import android.app.Notification
+import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
+import android.content.BroadcastReceiver
+import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.location.Location
+import android.location.LocationManager
 import android.os.IBinder
 import android.os.Looper
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import com.google.android.gms.location.FusedLocationProviderClient
+import com.google.android.gms.location.LocationAvailability
 import com.google.android.gms.location.LocationCallback
 import com.google.android.gms.location.LocationRequest
 import com.google.android.gms.location.LocationResult
@@ -40,6 +46,22 @@ class TrackingService : Service() {
     private var dwellAnchorLocation: Location? = null
     private var dwellStartTimeMs: Long = 0L
 
+    // Receiver to detect GPS Hardware Toggle in real-time mid-shift
+    private val gpsStateReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if (intent?.action == LocationManager.PROVIDERS_CHANGED_ACTION) {
+                val gpsEnabled = isGpsHardwareEnabled()
+                Log.w(TAG, "GPS Provider state changed mid-shift! Enabled: $gpsEnabled")
+                if (!gpsEnabled) {
+                    updateNotificationGpsWarning()
+                    updateRiderStatusGpsDisabled()
+                } else {
+                    updateNotificationNormal()
+                }
+            }
+        }
+    }
+
     override fun onCreate() {
         super.onCreate()
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
@@ -47,6 +69,10 @@ class TrackingService : Service() {
         sessionManager = SessionManager(this)
 
         setupLocationCallback()
+
+        // Register GPS hardware change listener
+        val filter = IntentFilter(LocationManager.PROVIDERS_CHANGED_ACTION)
+        registerReceiver(gpsStateReceiver, filter)
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -61,9 +87,35 @@ class TrackingService : Service() {
 
         cumulativeDistanceMeters = 0f
         startAdaptiveLocationUpdates()
+        fetchInitialLocationPoint()
         startPeriodicSyncWorker()
 
+        // Initial check if GPS is disabled when service starts
+        if (!isGpsHardwareEnabled()) {
+            updateNotificationGpsWarning()
+            updateRiderStatusGpsDisabled()
+        }
+
         return START_STICKY
+    }
+
+    @SuppressLint("MissingPermission")
+    private fun fetchInitialLocationPoint() {
+        try {
+            fusedLocationClient.lastLocation.addOnSuccessListener { loc ->
+                if (loc != null) {
+                    Log.d(TAG, "Initial location point captured: ${loc.latitude}, ${loc.longitude}")
+                    handleNewLocation(loc)
+                }
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to fetch initial location point", e)
+        }
+    }
+
+    private fun isGpsHardwareEnabled(): Boolean {
+        val locationManager = getSystemService(LOCATION_SERVICE) as LocationManager
+        return locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)
     }
 
     private fun createForegroundNotification(): Notification {
@@ -92,11 +144,61 @@ class TrackingService : Service() {
             .build()
     }
 
+    private fun updateNotificationGpsWarning() {
+        val notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+        val notificationIntent = Intent(this, MainActivity::class.java)
+        val pendingIntent = PendingIntent.getActivity(
+            this, 0, notificationIntent,
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+        )
+
+        val warningNotification = NotificationCompat.Builder(this, WaypointApp.CHANNEL_ID)
+            .setContentTitle("GPS TURNED OFF — TRACKING PAUSED")
+            .setContentText("Location is turned off. Please turn GPS back on to continue shift.")
+            .setSmallIcon(android.R.drawable.ic_dialog_alert)
+            .setContentIntent(pendingIntent)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setCategory(NotificationCompat.CATEGORY_ALARM)
+            .setOngoing(true)
+            .build()
+
+        notificationManager.notify(NOTIFICATION_ID, warningNotification)
+    }
+
+    private fun updateNotificationNormal() {
+        val notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+        notificationManager.notify(NOTIFICATION_ID, createForegroundNotification())
+    }
+
+    private fun updateRiderStatusGpsDisabled() {
+        val riderId = sessionManager.getRiderUid() ?: return
+        serviceScope.launch {
+            try {
+                FirebaseFirestore.getInstance().collection("riders").document(riderId)
+                    .update("status", "resting")
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to update status on GPS disabled", e)
+            }
+        }
+    }
+
     private fun setupLocationCallback() {
         locationCallback = object : LocationCallback() {
             override fun onLocationResult(locationResult: LocationResult) {
                 val location = locationResult.lastLocation ?: return
                 handleNewLocation(location)
+            }
+
+            override fun onLocationAvailability(availability: LocationAvailability) {
+                super.onLocationAvailability(availability)
+                val available = availability.isLocationAvailable && isGpsHardwareEnabled()
+                Log.d(TAG, "onLocationAvailability: available = $available")
+                if (!available) {
+                    updateNotificationGpsWarning()
+                    updateRiderStatusGpsDisabled()
+                } else {
+                    updateNotificationNormal()
+                }
             }
         }
     }
@@ -104,7 +206,7 @@ class TrackingService : Service() {
     @SuppressLint("MissingPermission")
     private fun startAdaptiveLocationUpdates() {
         val locationRequest = LocationRequest.Builder(
-            Priority.PRIORITY_BALANCED_POWER_ACCURACY,
+            Priority.PRIORITY_HIGH_ACCURACY,
             currentIntervalMs
         ).setMinUpdateIntervalMillis(currentIntervalMs / 2)
          .build()
@@ -157,7 +259,7 @@ class TrackingService : Service() {
                 db.collection("shifts").document(shiftId)
                     .update("totalDistanceKm", distanceKm)
                 db.collection("riders").document(riderId)
-                    .update("totalDistanceKm", distanceKm)
+                    .update("totalDistanceKm", distanceKm, "status", movementType)
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to update totalDistanceKm in Firestore", e)
             }
@@ -242,7 +344,7 @@ class TrackingService : Service() {
                     db.collection("shifts").document(shiftId)
                         .update("endTime", FieldValue.serverTimestamp())
                     db.collection("riders").document(riderId)
-                        .update("status", "offline")
+                        .update("status", "offline", "currentShiftId", null)
                 } catch (e: Exception) {
                     Log.e(TAG, "Error ending shift in Firestore", e)
                 } finally {
@@ -257,6 +359,11 @@ class TrackingService : Service() {
 
     override fun onDestroy() {
         super.onDestroy()
+        try {
+            unregisterReceiver(gpsStateReceiver)
+        } catch (_: Exception) {}
+        // Remove the foreground notification first so the OS can kill the process cleanly
+        stopForeground(STOP_FOREGROUND_REMOVE)
         fusedLocationClient.removeLocationUpdates(locationCallback)
         serviceScope.cancel()
     }
