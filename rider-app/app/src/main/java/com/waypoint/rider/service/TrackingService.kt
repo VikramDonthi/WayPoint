@@ -134,7 +134,7 @@ class TrackingService : Service() {
         )
 
         return NotificationCompat.Builder(this, WaypointApp.CHANNEL_ID)
-            .setContentTitle("Waypoint — Shift Active")
+            .setContentTitle("Valmo Fleet — Shift Active")
             .setContentText("Live Location Tracking Active")
             .setSmallIcon(android.R.drawable.ic_menu_compass)
             .setContentIntent(pendingIntent)

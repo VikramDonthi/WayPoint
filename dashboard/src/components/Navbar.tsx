@@ -75,7 +75,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           </div>
           <div>
             <h1 style={{ fontSize: '1.2rem', fontWeight: '900', letterSpacing: '-0.03em', color: '#0f172a', lineHeight: 1.1, margin: 0 }}>
-              WAYPOINT
+              VALMO FLEET
             </h1>
             <p style={{ fontSize: '0.68rem', color: '#94a3b8', fontWeight: '600', margin: 0, letterSpacing: '0.04em' }}>FLEET COMMAND</p>
           </div>
