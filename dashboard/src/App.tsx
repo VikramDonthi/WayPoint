@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { onAuthStateChanged, signInAnonymously, type User } from 'firebase/auth';
-import { collection, onSnapshot, query, doc, deleteDoc } from 'firebase/firestore';
+import { onAuthStateChanged, signInAnonymously, signOut as firebaseSignOut, type User } from 'firebase/auth';
+import { collection, onSnapshot, query, doc, deleteDoc, getDoc } from 'firebase/firestore';
 import { auth, db } from './firebase';
 import type { Rider } from './types';
 
@@ -36,16 +36,28 @@ export function App() {
     }
 
     // DEV mode: sign in anonymously so Firestore security rules get a real token.
-    // The Firestore rules allow anonymous users to read all data (dev convenience).
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get('dev') === 'true') {
       signInAnonymously(auth).catch((err) => {
         console.warn('Anonymous sign-in failed:', err);
       });
-      // Fall through – onAuthStateChanged below will pick up the anon user
     }
 
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user && db && !user.isAnonymous) {
+        try {
+          const riderDoc = await getDoc(doc(db, 'riders', user.uid));
+          if (riderDoc.exists()) {
+            console.warn('Rider account detected in dashboard context. Signing out.');
+            if (auth) await firebaseSignOut(auth);
+            setCurrentUser(null);
+            setAuthChecking(false);
+            return;
+          }
+        } catch (err) {
+          console.error('Error verifying user role:', err);
+        }
+      }
       setCurrentUser(user);
       setAuthChecking(false);
     });

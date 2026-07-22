@@ -10,6 +10,7 @@ import {
   getFirestore, 
   doc, 
   setDoc, 
+  getDoc,
   serverTimestamp, 
   type Firestore
 } from 'firebase/firestore';
@@ -133,7 +134,18 @@ export const loginAdmin = async (identifier: string, password: string) => {
   if (!email.includes('@')) {
     email = `${normalizePhone(identifier)}@waypoint.app`;
   }
-  return await signInWithEmailAndPassword(auth, email, password);
+  const credential = await signInWithEmailAndPassword(auth, email, password);
+
+  // Block Rider accounts from dashboard access
+  if (db && credential.user) {
+    const riderDoc = await getDoc(doc(db, 'riders', credential.user.uid));
+    if (riderDoc.exists()) {
+      await firebaseSignOut(auth);
+      throw new Error("Access Denied: Rider accounts are restricted to the Mobile App and cannot access the Admin Fleet Dashboard.");
+    }
+  }
+
+  return credential;
 };
 
 export const logoutAdmin = async () => {
