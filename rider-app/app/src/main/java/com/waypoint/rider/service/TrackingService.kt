@@ -45,6 +45,7 @@ class TrackingService : Service() {
     // Fully Automatic Dwell Anchor Tracker
     private var dwellAnchorLocation: Location? = null
     private var dwellStartTimeMs: Long = 0L
+    private var consecutiveTravelPings: Int = 0
 
     // Receiver to detect GPS Hardware Toggle in real-time mid-shift
     private val gpsStateReceiver = object : BroadcastReceiver() {
@@ -293,24 +294,33 @@ class TrackingService : Service() {
     }
 
     private fun determineAutomaticMovementType(location: Location, speed: Float): String {
+        val now = System.currentTimeMillis()
         val anchor = dwellAnchorLocation
+
         if (anchor == null) {
             dwellAnchorLocation = location
-            dwellStartTimeMs = location.time
+            dwellStartTimeMs = now
+            consecutiveTravelPings = 0
             return if (speed > 3.0f) "traveling" else "delivering"
         }
 
         val distanceMeters = location.distanceTo(anchor)
 
-        // Transition to traveling ONLY when moved > 75m away AND speed > 3.0 m/s (~10.8 km/h)
-        if (distanceMeters > 75f && speed > 3.0f) {
-            dwellAnchorLocation = null
-            dwellStartTimeMs = 0L
-            return "traveling"
+        // Require sustained vehicle movement (>100m away AND speed > 3.0 m/s for 2 consecutive pings) to reset anchor
+        if (distanceMeters > 100f && speed > 3.0f) {
+            consecutiveTravelPings++
+            if (consecutiveTravelPings >= 2) {
+                dwellAnchorLocation = null
+                dwellStartTimeMs = 0L
+                consecutiveTravelPings = 0
+                return "traveling"
+            }
+        } else {
+            consecutiveTravelPings = 0
         }
 
-        // Inside 75m anchor area: phone is stationary (deliver/rest). Ignore indoor GPS noise/drift!
-        val dwellDurationMinutes = (location.time - dwellStartTimeMs) / (1000 * 60)
+        // Inside 100m anchor area: phone is stationary (deliver/rest). Ignore indoor GPS noise/drift!
+        val dwellDurationMinutes = (now - dwellStartTimeMs) / (1000 * 60)
 
         return if (dwellDurationMinutes >= 15) {
             "resting"

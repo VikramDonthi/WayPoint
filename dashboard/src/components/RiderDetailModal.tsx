@@ -684,6 +684,15 @@ export const RiderDetailModal: React.FC<Props> = ({ rider, onClose }) => {
                             });
 
                             return smoothed.map((g, i) => {
+                              // If stationary group duration >= 15 mins, classify as resting/idle
+                              const startMs = toDate(g.startTime).getTime();
+                              const endMs   = toDate(g.endTime).getTime();
+                              const durationMin = (endMs - startMs) / (1000 * 60);
+
+                              if ((g.type === 'delivering' || g.type === 'resting') && durationMin >= 15) {
+                                g.type = 'resting';
+                              }
+
                               const colorMap: Record<string, string> = {
                                 start: '#10b981',
                                 end: '#ef4444',
