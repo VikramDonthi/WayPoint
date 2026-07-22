@@ -275,11 +275,13 @@ class TrackingService : Service() {
 
         lastLocation = location
 
-        // 2. Adjust ping frequency dynamically based on rider speed
-        val newInterval = when (movementType) {
-            "traveling" -> INTERVAL_FAST_MS      // Riding vehicle (~30s)
-            "delivering" -> INTERVAL_MEDIUM_MS   // Stopped at customer (~60s)
-            else -> INTERVAL_SLOW_MS             // Resting > 30m (~5 mins)
+        val dwellMin = if (dwellStartTimeMs > 0) (location.time - dwellStartTimeMs) / (1000 * 60) else 0L
+
+        // 2. Adjust ping frequency dynamically based on rider movement & idle time
+        val newInterval = when {
+            movementType == "traveling" -> INTERVAL_FAST_MS       // Active vehicle travel (30s)
+            dwellMin >= 2 -> INTERVAL_SLOW_MS                    // Stationary idle > 2m (5 mins)
+            else -> INTERVAL_MEDIUM_MS                            // Initial stop registration (60s)
         }
 
         if (newInterval != currentIntervalMs) {
