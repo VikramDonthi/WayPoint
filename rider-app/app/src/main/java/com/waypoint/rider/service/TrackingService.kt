@@ -283,32 +283,29 @@ class TrackingService : Service() {
     }
 
     private fun determineAutomaticMovementType(location: Location, speed: Float): String {
-        if (speed > 0.5f) {
-            dwellAnchorLocation = null
-            dwellStartTimeMs = 0L
-            return "traveling"
-        }
-
         val anchor = dwellAnchorLocation
         if (anchor == null) {
             dwellAnchorLocation = location
             dwellStartTimeMs = location.time
-            return "delivering"
+            return if (speed > 2.5f) "traveling" else "delivering"
         }
 
         val distanceMeters = location.distanceTo(anchor)
-        if (distanceMeters > 60f) {
+
+        // Transition to traveling ONLY when moved > 35m away AND speed > 2.0 m/s (~7 km/h)
+        if (distanceMeters > 35f && speed > 2.0f) {
             dwellAnchorLocation = null
             dwellStartTimeMs = 0L
             return "traveling"
         }
 
+        // Inside 35m anchor area: ignore indoor GPS noise/jitter speeds
         val dwellDurationMinutes = (location.time - dwellStartTimeMs) / (1000 * 60)
 
-        return if (dwellDurationMinutes <= 30) {
-            "delivering"
-        } else {
+        return if (dwellDurationMinutes >= 15) {
             "resting"
+        } else {
+            "delivering"
         }
     }
 
