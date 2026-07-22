@@ -32,14 +32,6 @@ export const normalizePhone = (phone: string): string => {
 };
 
 export const getStoredConfig = (): FirebaseAppConfig => {
-  const saved = localStorage.getItem(STORAGE_KEY);
-  if (saved) {
-    try {
-      return JSON.parse(saved);
-    } catch (e) {
-      console.error("Failed to parse stored firebase config", e);
-    }
-  }
   return DEFAULT_CONFIG;
 };
 
