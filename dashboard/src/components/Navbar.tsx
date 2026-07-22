@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Navigation, Users, UserPlus, Settings, LogOut, MapPin, Smartphone, ChevronDown, Shield, Phone, Mail, Activity } from 'lucide-react';
+import { Navigation, Users, UserPlus, Settings, LogOut, MapPin, ChevronDown, Shield, Phone, Mail, Activity } from 'lucide-react';
 import { logoutAdmin } from '../firebase';
 import type { User } from 'firebase/auth';
 
@@ -8,7 +8,6 @@ interface NavbarProps {
   setActiveTab: (tab: 'map' | 'riders') => void;
   onOpenAddRider: () => void;
   onOpenConfig: () => void;
-  onOpenQR: () => void;
   riderCount: number;
   onlineCount: number;
   currentUser?: User | null;
@@ -19,7 +18,6 @@ export const Navbar: React.FC<NavbarProps> = ({
   setActiveTab,
   onOpenAddRider,
   onOpenConfig,
-  onOpenQR,
   riderCount,
   onlineCount,
   currentUser,
@@ -125,15 +123,6 @@ export const Navbar: React.FC<NavbarProps> = ({
 
       {/* ── Actions + Profile ── */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-
-        <button onClick={onOpenQR} style={{
-          display: 'flex', alignItems: 'center', gap: '0.4rem',
-          padding: '0.5rem 0.9rem', borderRadius: '10px',
-          background: 'rgba(2,132,199,0.08)', border: '1px solid rgba(2,132,199,0.2)',
-          color: '#0284c7', fontWeight: '700', fontSize: '0.82rem', cursor: 'pointer',
-        }}>
-          <Smartphone size={15} /> QR App
-        </button>
 
         <button onClick={onOpenAddRider} style={{
           display: 'flex', alignItems: 'center', gap: '0.4rem',

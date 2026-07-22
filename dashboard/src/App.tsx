@@ -13,7 +13,6 @@ import { ConfigModal } from './components/ConfigModal';
 import { RiderDetailModal } from './components/RiderDetailModal';
 import { LoginView } from './components/LoginView';
 import { RiderMobileApp } from './components/RiderMobileApp';
-import { QRCodeModal } from './components/QRCodeModal';
 
 export function App() {
   // Check if URL has ?mode=rider
@@ -27,7 +26,6 @@ export function App() {
   
   const [isAddRiderOpen, setIsAddRiderOpen] = useState(false);
   const [isConfigOpen, setIsConfigOpen] = useState(false);
-  const [isQROpen, setIsQROpen] = useState(false);
   const [selectedRider, setSelectedRider] = useState<Rider | null>(null);
 
   // Listen to Auth State safely
@@ -130,7 +128,6 @@ export function App() {
         setActiveTab={setActiveTab}
         onOpenAddRider={() => setIsAddRiderOpen(true)}
         onOpenConfig={() => setIsConfigOpen(true)}
-        onOpenQR={() => setIsQROpen(true)}
         riderCount={riders.length}
         onlineCount={onlineCount}
         currentUser={currentUser}
@@ -170,11 +167,6 @@ export function App() {
       <ConfigModal
         isOpen={isConfigOpen}
         onClose={() => setIsConfigOpen(false)}
-      />
-
-      <QRCodeModal
-        isOpen={isQROpen}
-        onClose={() => setIsQROpen(false)}
       />
 
       <RiderDetailModal
