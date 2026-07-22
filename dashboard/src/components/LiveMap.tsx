@@ -87,10 +87,10 @@ export const LiveMap: React.FC<LiveMapProps> = ({ riders, onSelectRider }) => {
 
         const icon = createMarkerIcon(rider.status, rider.name);
         const popupContent = `
-          <div style="font-family: sans-serif; padding: 4px;">
-            <strong style="font-size: 14px; color: #f8fafc;">${rider.name}</strong><br/>
-            <span style="font-size: 12px; color: #38bdf8;">Mobile: ${rider.phone}</span><br/>
-            <span style="font-size: 11px; color: #94a3b8;">Status: <strong style="color: ${rider.status === 'traveling' ? '#10b981' : rider.status === 'delivering' ? '#00f2fe' : rider.status === 'resting' ? '#f59e0b' : '#64748b'}">${rider.status.toUpperCase()}</strong></span>
+          <div style="font-family: sans-serif; padding: 4px; color: #0f172a;">
+            <strong style="font-size: 14px; color: #0f172a; font-weight: 800;">${rider.name}</strong><br/>
+            <span style="font-size: 12px; color: #0284c7; font-weight: 600;">Mobile: ${rider.phone}</span><br/>
+            <span style="font-size: 11px; color: #475569;">Status: <strong style="color: ${rider.status === 'traveling' ? '#10b981' : rider.status === 'delivering' ? '#0284c7' : rider.status === 'resting' ? '#d97706' : '#64748b'}; font-weight: 800;">${rider.status.toUpperCase()}</strong></span>
           </div>
         `;
 
