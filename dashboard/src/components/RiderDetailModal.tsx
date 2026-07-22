@@ -650,7 +650,40 @@ export const RiderDetailModal: React.FC<Props> = ({ rider, onClose }) => {
                             });
                             if (cur) grouped.push(cur);
 
-                            return grouped.map((g, i) => {
+                            // Pass 2: Merge brief indoor GPS jitter spikes (<3 pings traveling at same location) into stationary dwell block
+                            const smoothed: typeof grouped = [];
+                            grouped.forEach((g) => {
+                              if (!smoothed.length) {
+                                smoothed.push(g);
+                                return;
+                              }
+                              const prev = smoothed[smoothed.length - 1];
+
+                              const isJitter =
+                                g.type === 'traveling' &&
+                                g.pingCount <= 3 &&
+                                (prev.type === 'delivering' || prev.type === 'resting' || prev.type === 'live') &&
+                                Math.abs(g.endLat - prev.endLat) < 0.001 &&
+                                Math.abs(g.endLng - prev.endLng) < 0.001;
+
+                              const isBothStationary =
+                                (g.type === 'delivering' || g.type === 'resting') &&
+                                (prev.type === 'delivering' || prev.type === 'resting') &&
+                                Math.abs(g.endLat - prev.endLat) < 0.001 &&
+                                Math.abs(g.endLng - prev.endLng) < 0.001;
+
+                              if (isJitter || isBothStationary) {
+                                prev.endTime = g.endTime;
+                                prev.endLat = g.endLat;
+                                prev.endLng = g.endLng;
+                                prev.pingCount += g.pingCount;
+                                prev.pings.push(...g.pings);
+                              } else {
+                                smoothed.push(g);
+                              }
+                            });
+
+                            return smoothed.map((g, i) => {
                               const colorMap: Record<string, string> = {
                                 start: '#10b981',
                                 end: '#ef4444',

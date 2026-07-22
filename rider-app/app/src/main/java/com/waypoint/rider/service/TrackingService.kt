@@ -295,19 +295,19 @@ class TrackingService : Service() {
         if (anchor == null) {
             dwellAnchorLocation = location
             dwellStartTimeMs = location.time
-            return if (speed > 2.5f) "traveling" else "delivering"
+            return if (speed > 3.0f) "traveling" else "delivering"
         }
 
         val distanceMeters = location.distanceTo(anchor)
 
-        // Transition to traveling ONLY when moved > 35m away AND speed > 2.0 m/s (~7 km/h)
-        if (distanceMeters > 35f && speed > 2.0f) {
+        // Transition to traveling ONLY when moved > 75m away AND speed > 3.0 m/s (~10.8 km/h)
+        if (distanceMeters > 75f && speed > 3.0f) {
             dwellAnchorLocation = null
             dwellStartTimeMs = 0L
             return "traveling"
         }
 
-        // Inside 35m anchor area: ignore indoor GPS noise/jitter speeds
+        // Inside 75m anchor area: phone is stationary (deliver/rest). Ignore indoor GPS noise/drift!
         val dwellDurationMinutes = (location.time - dwellStartTimeMs) / (1000 * 60)
 
         return if (dwellDurationMinutes >= 15) {
