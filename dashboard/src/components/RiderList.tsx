@@ -305,7 +305,7 @@ export const RiderList: React.FC<RiderListProps> = ({
                     <Navigation size={14} color="#2563eb" /> Shift Distance
                   </span>
                   <span style={{ fontFamily: 'monospace', fontWeight: '800', color: '#0284c7', backgroundColor: 'rgba(2, 132, 199, 0.1)', padding: '2px 8px', borderRadius: '6px' }}>
-                    {(rider.totalDistanceKm || 0).toFixed(2)} km
+                    {Number(rider.totalDistanceKm || 0).toFixed(3)} km
                   </span>
                 </div>
 

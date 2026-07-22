@@ -269,11 +269,11 @@ export const RiderDetailModal: React.FC<Props> = ({ rider, onClose }) => {
       const startT = list.length > 0 ? toDate(list[0].timestamp).getTime() : 0;
       const endT   = list.length > 0 ? toDate(list[list.length - 1].timestamp).getTime() : 0;
 
-      const storedKm = selectedShift.totalDistanceKm || 0;
-      const derivedKm = parseFloat(travelKm.toFixed(2));
+      const storedKm = parseFloat(Number(selectedShift.totalDistanceKm || 0).toFixed(3));
+      const derivedKm = parseFloat(travelKm.toFixed(3));
 
       setStats({
-        travelKm: derivedKm > 0.01 ? derivedKm : storedKm,
+        travelKm: derivedKm > 0.001 ? derivedKm : storedKm,
         travelSec: Math.round(travelSec),
         restSec: Math.round(restSec),
         deliverSec: Math.round(deliverSec),
@@ -356,7 +356,7 @@ export const RiderDetailModal: React.FC<Props> = ({ rider, onClose }) => {
             </div>
             <div style={{ display: 'flex', gap: '1.2rem', fontSize: '0.82rem', color: 'rgba(255,255,255,0.7)' }}>
               <span>Mobile: {rider.phone}</span>
-              <span>{(rider.totalDistanceKm || 0).toFixed(1)} km lifetime</span>
+              <span>{Number(rider.totalDistanceKm || 0).toFixed(3)} km lifetime</span>
               <span>{shifts.length} shifts total</span>
             </div>
           </div>
@@ -423,7 +423,7 @@ export const RiderDetailModal: React.FC<Props> = ({ rider, onClose }) => {
                       {start.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })} — {end ? end.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : 'ongoing'}
                     </div>
                     <div style={{ fontSize: '0.72rem', color: '#94a3b8', marginTop: '2px' }}>
-                      {durH}h · {(shift.totalDistanceKm || 0).toFixed(1)} km
+                      {durH}h · {Number(shift.totalDistanceKm || 0).toFixed(3)} km
                     </div>
                   </button>
                 );
@@ -498,7 +498,7 @@ export const RiderDetailModal: React.FC<Props> = ({ rider, onClose }) => {
                         <>
                           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.75rem', marginBottom: '1.25rem' }}>
                             {[
-                              { icon: <Navigation size={18} />, label: 'Distance', value: `${stats.travelKm} km`, accent: '#0284c7' },
+                              { icon: <Navigation size={18} />, label: 'Distance', value: `${Number(stats.travelKm || 0).toFixed(3)} km`, accent: '#0284c7' },
                               { icon: <Activity size={18} />, label: 'Avg Speed', value: `${stats.avgSpeedKmh} km/h`, accent: '#8b5cf6' },
                               { icon: <TrendingUp size={18} />, label: 'Max Speed', value: `${stats.maxSpeedKmh} km/h`, accent: '#ef4444' },
                               { icon: <Bike size={18} />, label: 'Moving Time', value: fmtDuration(stats.travelSec), accent: '#10b981' },

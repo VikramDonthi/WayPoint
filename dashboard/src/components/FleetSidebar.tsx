@@ -201,9 +201,8 @@ export const FleetSidebar: React.FC<FleetSidebarProps> = ({ riders, onSelectRide
                 {/* Distance + arrow */}
                 <div style={{ textAlign: 'right', flexShrink: 0 }}>
                   <div style={{ fontSize: '0.82rem', fontWeight: '800', color: '#0284c7' }}>
-                    {(rider.totalDistanceKm || 0).toFixed(1)}
+                    {Number(rider.totalDistanceKm || 0).toFixed(3)} km
                   </div>
-                  <div style={{ fontSize: '0.62rem', color: '#94a3b8', fontWeight: '600' }}>km</div>
                   <ChevronRight size={13} color="#cbd5e1" />
                 </div>
               </div>
