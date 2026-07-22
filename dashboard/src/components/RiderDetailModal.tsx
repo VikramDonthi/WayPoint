@@ -574,64 +574,155 @@ export const RiderDetailModal: React.FC<Props> = ({ rider, onClose }) => {
                       ) : (
                         <div style={{ position: 'relative' }}>
                           {/* Vertical line */}
-                          <div style={{ position: 'absolute', left: '19px', top: 0, bottom: 0, width: '2px', background: '#e2e8f0', zIndex: 0 }} />
+                          <div style={{ position: 'absolute', left: '19px', top: '10px', bottom: '10px', width: '2px', background: '#e2e8f0', zIndex: 0 }} />
 
-                          {pings.map((p, i) => {
-                            const color = statusColor[p.movementType] || '#94a3b8';
-                            const isFirst = i === 0;
-                            const isLast = i === pings.length - 1;
+                          {(() => {
                             const isOngoingShift = !selectedShift.endTime;
-                            const speedKmh = (p.speed || 0) * 3.6;
-                            const showEvery = pings.length > 60 ? 4 : 1;
-                            if (!isFirst && !isLast && i % showEvery !== 0) return null;
+                            
+                            // Group consecutive pings by movementType
+                            const grouped: Array<{
+                              type: string;
+                              startTime: any;
+                              endTime: any;
+                              startLat: number;
+                              startLng: number;
+                              endLat: number;
+                              endLng: number;
+                              pingCount: number;
+                              avgSpeedKmh: number;
+                              pings: any[];
+                            }> = [];
 
-                            const pointLabel = isFirst
-                              ? 'Shift Start'
-                              : isLast
-                              ? isOngoingShift
-                                ? 'Current Position (Live)'
-                                : 'Shift End'
-                              : p.movementType;
+                            let cur: any = null;
 
-                            const dotColor = isFirst
-                              ? '#10b981'
-                              : isLast
-                              ? isOngoingShift
-                                ? '#0284c7'
-                                : '#ef4444'
-                              : color;
+                            pings.forEach((p, idx) => {
+                              const isFirst = idx === 0;
+                              const isLast = idx === pings.length - 1;
+                              const pType = isFirst
+                                ? 'start'
+                                : isLast && !isOngoingShift
+                                ? 'end'
+                                : isLast && isOngoingShift
+                                ? 'live'
+                                : p.movementType;
 
-                            return (
-                              <div key={p.id || i} style={{ display: 'flex', gap: '1rem', marginBottom: '0.5rem', alignItems: 'flex-start', position: 'relative', zIndex: 1 }}>
-                                <div style={{
-                                  width: '22px', height: '22px', borderRadius: '50%',
-                                  background: dotColor,
-                                  border: '3px solid #fff',
-                                  boxShadow: `0 0 0 2px ${dotColor}`,
-                                  flexShrink: 0, marginTop: '2px'
-                                }} />
-                                <div style={{
-                                  flex: 1, background: '#f8fafc',
-                                  border: '1px solid #e2e8f0', borderRadius: '10px',
-                                  padding: '0.55rem 0.85rem',
-                                  fontSize: '0.78rem'
-                                }}>
-                                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '2px' }}>
-                                    <span style={{ fontWeight: '700', color: dotColor, textTransform: 'capitalize' }}>
-                                      {pointLabel}
-                                    </span>
-                                    <span style={{ color: '#94a3b8', fontFamily: 'monospace', fontSize: '0.72rem' }}>
-                                      {fmtDate(p.timestamp)}
-                                    </span>
-                                  </div>
-                                  <div style={{ display: 'flex', gap: '1rem', color: '#64748b' }}>
-                                    <span>Location: {p.lat.toFixed(5)}, {p.lng.toFixed(5)}</span>
-                                    {speedKmh > 0 && <span>Speed: {speedKmh.toFixed(1)} km/h</span>}
+                              const speedKmh = (p.speed || 0) * 3.6;
+
+                              if (!cur) {
+                                cur = {
+                                  type: pType,
+                                  startTime: p.timestamp,
+                                  endTime: p.timestamp,
+                                  startLat: p.lat,
+                                  startLng: p.lng,
+                                  endLat: p.lat,
+                                  endLng: p.lng,
+                                  pingCount: 1,
+                                  avgSpeedKmh: speedKmh,
+                                  pings: [p]
+                                };
+                                return;
+                              }
+
+                              const isSameType = cur.type === pType;
+                              if (isSameType && pType !== 'start' && pType !== 'end') {
+                                cur.endTime = p.timestamp;
+                                cur.endLat = p.lat;
+                                cur.endLng = p.lng;
+                                cur.pingCount += 1;
+                                cur.avgSpeedKmh = (cur.avgSpeedKmh * (cur.pingCount - 1) + speedKmh) / cur.pingCount;
+                                cur.pings.push(p);
+                              } else {
+                                grouped.push(cur);
+                                cur = {
+                                  type: pType,
+                                  startTime: p.timestamp,
+                                  endTime: p.timestamp,
+                                  startLat: p.lat,
+                                  startLng: p.lng,
+                                  endLat: p.lat,
+                                  endLng: p.lng,
+                                  pingCount: 1,
+                                  avgSpeedKmh: speedKmh,
+                                  pings: [p]
+                                };
+                              }
+                            });
+                            if (cur) grouped.push(cur);
+
+                            return grouped.map((g, i) => {
+                              const colorMap: Record<string, string> = {
+                                start: '#10b981',
+                                end: '#ef4444',
+                                live: '#0284c7',
+                                traveling: '#10b981',
+                                delivering: '#0284c7',
+                                resting: '#f59e0b'
+                              };
+
+                              const labelMap: Record<string, string> = {
+                                start: 'Shift Start',
+                                end: 'Shift End',
+                                live: 'Current Position (Live)',
+                                traveling: 'Traveling',
+                                delivering: 'Delivering / Customer Stop',
+                                resting: 'Resting / Idle'
+                              };
+
+                              const dotColor = colorMap[g.type] || '#64748b';
+                              const label = labelMap[g.type] || g.type;
+
+                              const startTimeStr = fmtDate(g.startTime);
+                              const endTimeStr = fmtDate(g.endTime);
+                              const isSinglePoint = startTimeStr === endTimeStr || g.pingCount === 1;
+                              const timeSpanStr = isSinglePoint ? startTimeStr : `${startTimeStr} — ${endTimeStr}`;
+
+                              return (
+                                <div key={i} style={{ display: 'flex', gap: '1rem', marginBottom: '0.75rem', alignItems: 'flex-start', position: 'relative', zIndex: 1 }}>
+                                  <div style={{
+                                    width: '22px', height: '22px', borderRadius: '50%',
+                                    background: dotColor,
+                                    border: '3px solid #fff',
+                                    boxShadow: `0 0 0 2px ${dotColor}`,
+                                    flexShrink: 0, marginTop: '2px'
+                                  }} />
+
+                                  <div style={{
+                                    flex: 1, background: '#f8fafc',
+                                    border: '1.5px solid #e2e8f0', borderRadius: '12px',
+                                    padding: '0.65rem 0.95rem',
+                                    fontSize: '0.8rem'
+                                  }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                        <span style={{ fontWeight: '800', color: dotColor }}>
+                                          {label}
+                                        </span>
+                                        {g.pingCount > 1 && (
+                                          <span style={{
+                                            fontSize: '0.68rem', background: 'rgba(2, 132, 199, 0.08)',
+                                            color: '#0284c7', fontWeight: '700', padding: '1px 7px', borderRadius: '99px'
+                                          }}>
+                                            {g.pingCount} pings aggregated
+                                          </span>
+                                        )}
+                                      </div>
+                                      <span style={{ color: '#94a3b8', fontFamily: 'monospace', fontSize: '0.72rem', fontWeight: '600' }}>
+                                        {timeSpanStr}
+                                      </span>
+                                    </div>
+
+                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1.2rem', color: '#475569', fontSize: '0.76rem', marginTop: '2px' }}>
+                                      <span>Location: <strong style={{ color: '#0f172a' }}>{g.endLat.toFixed(5)}, {g.endLng.toFixed(5)}</strong></span>
+                                      {g.avgSpeedKmh > 0.1 && (
+                                        <span>Avg Speed: <strong style={{ color: '#0f172a' }}>{g.avgSpeedKmh.toFixed(1)} km/h</strong></span>
+                                      )}
+                                    </div>
                                   </div>
                                 </div>
-                              </div>
-                            );
-                          })}
+                              );
+                            });
+                          })()}
                         </div>
                       )}
                     </div>

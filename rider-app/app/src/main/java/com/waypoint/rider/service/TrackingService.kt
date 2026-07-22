@@ -229,7 +229,15 @@ class TrackingService : Service() {
         // Compute distance increment from previous location point
         val prev = lastLocation
         if (prev != null) {
+            val timeDiffMs = location.time - prev.time
             val distMeters = location.distanceTo(prev)
+            
+            // Skip rapid duplicate pings (<1m movement within 15s) to prevent spamming
+            if (distMeters < 1.0f && timeDiffMs < 15000L) {
+                Log.d(TAG, "Skipping duplicate rapid ping at same location")
+                return
+            }
+
             if (distMeters in 3f..5000f) { // filter out GPS jitter (< 3m) and invalid teleports (> 5km in single ping)
                 cumulativeDistanceMeters += distMeters
             }
