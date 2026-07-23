@@ -374,6 +374,15 @@ class TrackingService : Service() {
         }
     }
 
+    override fun onTaskRemoved(rootIntent: Intent?) {
+        super.onTaskRemoved(rootIntent)
+        Log.d(TAG, "App swiped away from Recents, but TrackingService remains active in foreground.")
+        // Keep foreground service and notification active
+        val notification = createForegroundNotification()
+        val notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+        notificationManager.notify(NOTIFICATION_ID, notification)
+    }
+
     override fun onDestroy() {
         super.onDestroy()
         try {
