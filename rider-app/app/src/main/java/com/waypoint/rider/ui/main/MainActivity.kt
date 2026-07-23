@@ -308,6 +308,30 @@ class MainActivity : AppCompatActivity() {
         val riderId = sessionManager.getRiderUid() ?: return
         binding.progressBarShift.visibility = View.VISIBLE
 
+        // Auto-close any previous un-ended shifts for this rider before creating a new one
+        db.collection("shifts")
+            .whereEqualTo("riderId", riderId)
+            .whereEqualTo("endTime", null)
+            .get()
+            .addOnSuccessListener { querySnapshot ->
+                if (!querySnapshot.isEmpty) {
+                    val batch = db.batch()
+                    for (doc in querySnapshot.documents) {
+                        batch.update(doc.reference, "endTime", FieldValue.serverTimestamp())
+                    }
+                    batch.commit().addOnCompleteListener {
+                        createNewShiftDocument(riderId)
+                    }
+                } else {
+                    createNewShiftDocument(riderId)
+                }
+            }
+            .addOnFailureListener {
+                createNewShiftDocument(riderId)
+            }
+    }
+
+    private fun createNewShiftDocument(riderId: String) {
         val newShiftData = hashMapOf(
             "riderId" to riderId,
             "startTime" to FieldValue.serverTimestamp(),

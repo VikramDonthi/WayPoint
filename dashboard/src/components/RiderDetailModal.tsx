@@ -193,7 +193,16 @@ export const RiderDetailModal: React.FC<Props> = ({ rider, onClose }) => {
     avgSpeedKmh: 0, maxSpeedKmh: 0, shiftDurationSec: 0
   });
 
-  // Real-time Shifts listener
+  const [nowMs, setNowMs] = useState(Date.now());
+
+  // 1. Live 1-second ticker when viewing an ongoing shift
+  useEffect(() => {
+    if (!selectedShift || selectedShift.endTime) return;
+    const interval = setInterval(() => setNowMs(Date.now()), 1000);
+    return () => clearInterval(interval);
+  }, [selectedShift]);
+
+  // 2. Real-time Shifts listener
   useEffect(() => {
     if (!rider || !db) return;
     setLoading(true);
@@ -206,16 +215,31 @@ export const RiderDetailModal: React.FC<Props> = ({ rider, onClose }) => {
     const unsubscribe = onSnapshot(q, (snap) => {
       const list: Shift[] = snap.docs
         .map(d => ({ id: d.id, ...d.data() } as Shift))
-        .sort((a, b) => toDate(b.startTime).getTime() - toDate(a.startTime).getTime());
+        .sort((a, b) => {
+          const tA = a.startTime ? toDate(a.startTime).getTime() : Date.now();
+          const tB = b.startTime ? toDate(b.startTime).getTime() : Date.now();
+          return tB - tA;
+        });
 
       setShifts(list);
       setSelectedShift(prev => {
-        if (!prev && list.length > 0) return list[0];
+        // Priority 1: Active shift referenced on rider document
+        if (rider.currentShiftId) {
+          const activeShift = list.find(s => s.id === rider.currentShiftId);
+          if (activeShift) return activeShift;
+        }
+        // Priority 2: Any ongoing shift (!endTime)
+        const ongoingShift = list.find(s => !s.endTime);
+        if (ongoingShift) return ongoingShift;
+
+        // Priority 3: Keep existing selection if valid
         if (prev) {
           const updated = list.find(s => s.id === prev.id);
-          return updated || list[0] || null;
+          if (updated) return updated;
         }
-        return null;
+
+        // Priority 4: Default to newest shift
+        return list[0] || null;
       });
       setLoading(false);
     }, (err) => {
@@ -226,7 +250,7 @@ export const RiderDetailModal: React.FC<Props> = ({ rider, onClose }) => {
     return () => unsubscribe();
   }, [rider]);
 
-  // Real-time Pings listener when shift selected
+  // 3. Real-time Pings listener when shift selected
   useEffect(() => {
     if (!selectedShift || !db) {
       setPings([]);
@@ -266,8 +290,18 @@ export const RiderDetailModal: React.FC<Props> = ({ rider, onClose }) => {
         }
       }
 
-      const startT = list.length > 0 ? toDate(list[0].timestamp).getTime() : 0;
-      const endT   = list.length > 0 ? toDate(list[list.length - 1].timestamp).getTime() : 0;
+      const startT = selectedShift.startTime ? toDate(selectedShift.startTime).getTime() : (list.length > 0 ? toDate(list[0].timestamp).getTime() : Date.now());
+      const endT   = selectedShift.endTime ? toDate(selectedShift.endTime).getTime() : nowMs;
+      const totalShiftSec = Math.max(0, Math.round((endT - startT) / 1000));
+
+      // If stationary dwell and breakdown is empty, attribute duration to current status
+      if (travelSec + restSec + deliverSec === 0 && totalShiftSec > 0) {
+        if (rider?.status === 'resting' || totalShiftSec >= 900) {
+          restSec = totalShiftSec;
+        } else {
+          deliverSec = totalShiftSec;
+        }
+      }
 
       const storedKm = parseFloat(Number(selectedShift.totalDistanceKm || 0).toFixed(3));
       const derivedKm = parseFloat(travelKm.toFixed(3));
@@ -279,7 +313,7 @@ export const RiderDetailModal: React.FC<Props> = ({ rider, onClose }) => {
         deliverSec: Math.round(deliverSec),
         avgSpeedKmh: speedCount > 0 ? parseFloat((speedSum / speedCount).toFixed(1)) : 0,
         maxSpeedKmh: parseFloat(maxSpeedKmh.toFixed(1)),
-        shiftDurationSec: Math.round((endT - startT) / 1000)
+        shiftDurationSec: totalShiftSec
       });
 
       setPingsLoading(false);
